@@ -72,5 +72,9 @@ def upload_file():
 
 
 if __name__ == '__main__':
+    # preparing environment
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+
     app.debug = IS_DEBUG
     app.run(host='0.0.0.0', port=5000)
