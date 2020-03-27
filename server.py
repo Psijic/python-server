@@ -61,7 +61,6 @@ def upload_file():
         abort(400, 'No file present')
     file = request.files['file']
     if file.filename == '':
-        flash('No selected file')
         return redirect(request.url)
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
