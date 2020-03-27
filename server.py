@@ -6,6 +6,8 @@ from flask import Flask, render_template, request, redirect, jsonify, url_for, f
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
+
+from werkzeug.exceptions import abort
 from werkzeug.utils import secure_filename
 
 from encrypt import encrypt_file
@@ -38,38 +40,36 @@ def add_file_to_db():
     pass
 
 
-def encode_file():
-    pass
-
-
 def add_file_to_library(filename):
     encrypt_file(AES_KEY, UPLOAD_FOLDER + "/" + filename)
     add_file_to_db()
 
-# upload file
+
+# upload file main form
 @app.route('/', methods=['GET', 'POST'])
-def upload_file():
+def upload_file_form():
     if request.method == 'POST':
-        # check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-        file = request.files['file']
-        # if user does not select file, browser also submit an empty part without filename
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            # return redirect(url_for('uploaded_file', filename=filename))
-            add_file_to_library(filename)
-            return redirect(request.url)
-        # TODO: check external uploading; RESPONSE​: 200 OK:​ {“input_content_id”: 1}
+        return upload_file()
     return render_template('uploadFile.html', fileTypes=str(ALLOWED_EXTENSIONS)[1:-1], fileSize=MAX_FILE_SIZE_MB)
 
 
-#@app.route('/upload_input_content/<string:filename>', methods=['GET', 'POST'])
+# upload file
+@app.route('/upload_input_content', methods=['POST'])
+def upload_file():
+    # check if the post request has the file part
+    if 'file' not in request.files:
+        abort(400, 'No file present')
+    file = request.files['file']
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.url)
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        add_file_to_library(filename)
+        return jsonify({'input_content_id': 1})
+    abort(400, 'This video format is not supported ')
+
 
 if __name__ == '__main__':
     app.debug = IS_DEBUG
