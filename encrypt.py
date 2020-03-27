@@ -39,7 +39,7 @@ def encrypt_file(key, in_filename, out_filename=None, chunk_size=64 * 1024):
 
 
 def decrypt_file(key, in_filename, out_filename=None, chunk_size=24 * 1024):
-    # Decrypts a file using AES (CBC mode) with the given key. Parameters are similar to encrypt_file
+    # Decrypts a file using AES (CBC mode) with the given key. Parameters are similar to encrypt_file.
     if not out_filename:
         out_filename = os.path.splitext(in_filename)[0]
 

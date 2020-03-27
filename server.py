@@ -13,7 +13,7 @@ from encrypt import encrypt_file
 IS_DEBUG = True  # False for release!
 UPLOAD_FOLDER = 'videos'
 ALLOWED_EXTENSIONS = {'mp4', 'mkv', 'jpg'}
-MAX_FILE_SIZE_MB = 16
+MAX_FILE_SIZE_MB = 512
 AES_KEY = 'super_secret_key'  # hashed key should be inserted externally!
 # AES_HASH_KEY = hashlib.sha256(AES_KEY.encode('utf-8')).digest()
 
