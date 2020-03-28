@@ -1,24 +1,18 @@
 #!/usr/bin/python3
-import hashlib
-from pathlib import Path
-from random import random
-
-from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, request, redirect, url_for
-from sqlalchemy import create_engine
 import os
 
+from flask import Flask, jsonify, redirect, render_template, request, send_file
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from werkzeug.exceptions import abort
 from werkzeug.utils import secure_filename
-
-from encrypt import encrypt_file
 
 from database import Base, Video
 
 IS_DEBUG = True  # False for release!
 # UPLOAD_FOLDER = Path('videos')
 UPLOAD_FOLDER = 'videos/'
-ALLOWED_EXTENSIONS = {'mp4', 'mkv', 'jpg'}
+ALLOWED_EXTENSIONS = ['.mp4', '.mkv', '.jpg']
 MAX_FILE_SIZE_MB = 512
 AES_KEY = 'super_secret_key'  # hashed key should be inserted externally!
 # AES_HASH_KEY = hashlib.sha256(AES_KEY.encode('utf-8')).digest()
@@ -35,7 +29,7 @@ session = DBSession()
 
 # check the file extension
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return os.path.splitext(filename)[1] in ALLOWED_EXTENSIONS
 
 
 # check if filename already exists. It's possible to check by file key.
@@ -51,15 +45,42 @@ def add_file_to_db(name, path, key, kid):
 
 
 def add_file_to_library(filename):
-    encrypt_file(AES_KEY, UPLOAD_FOLDER + filename)
+    # encrypt_file(AES_KEY, UPLOAD_FOLDER + filename)
     add_file_to_db(filename, UPLOAD_FOLDER, "key_" + filename, "kid_" + filename)
+
+
+# def get_file_path(content_id):
+#     video = session.query(Video).filter_by(id=content_id).scalar()
+#     return os.path.abspath(video.path + video.name)
+
+# upload file main form
+@app.route('/', methods=['GET', 'POST'])
+def upload_file_form():
+    if request.method == 'POST':
+        return upload_file()
+    file_types = ', '.join(ALLOWED_EXTENSIONS)
+    return render_template('main.html', fileTypes=file_types, fileSize=MAX_FILE_SIZE_MB)
 
 
 @app.route('/packaged_content/<int:content_id>', methods=['GET'])
 def packaged_content_get(content_id):
     video = session.query(Video).filter_by(id=content_id).scalar()
-    url = video.path + video.name
+    url = os.path.abspath(video.path + video.name)
     return jsonify({'url': url, 'key': video.key, 'kid': video.kid})
+
+
+@app.route('/download/<int:content_id>', methods=['GET'])
+def download_file(content_id):
+    video = session.query(Video).filter_by(id=content_id).scalar()
+    url = os.path.abspath(video.path + video.name)
+    return send_file(url, as_attachment=True)
+
+
+@app.route('/play/<int:content_id>', methods=['GET'])
+def play_video(content_id):
+    video = session.query(Video).filter_by(id=content_id).scalar()
+    url = os.path.abspath(video.path + video.name)
+    return render_template('player.html', url=url)
 
 
 @app.route('/packaged_content', methods=['POST'])
@@ -67,15 +88,8 @@ def packaged_content_post():
     return jsonify({'input_content_id': 1, 'key': 'hyN9IKGfWKdAwFaE5pm0qg', 'kid': 'oW5AK5BW43HzbTSKpiu3SQ'})
 
 
-# upload file main form
-@app.route('/', methods=['GET', 'POST'])
-def upload_file_form():
-    if request.method == 'POST':
-        return upload_file()
-    return render_template('uploadFile.html', fileTypes=str(ALLOWED_EXTENSIONS)[1:-1], fileSize=MAX_FILE_SIZE_MB)
-
-
 # upload file
+@app.route('/upload', methods=['POST'])
 @app.route('/upload_input_content', methods=['POST'])
 def upload_file():
     # check if the post request has the file part
@@ -99,7 +113,7 @@ def upload_file():
 def show_all_videos():
     videos = session.query(Video).all()
     return jsonify(videos=[video.serialize for video in videos])
-    # return render_template('videos.html', videos=all_videos)
+    # return render_template('player.html', videos=all_videos)
 
 
 if __name__ == '__main__':

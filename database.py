@@ -17,6 +17,7 @@ class Video(Base):
 
     @property
     def serialize(self):
+        # Return object data in serializeable format
         return {
             'id': self.id,
             'name': self.name,
@@ -24,9 +25,7 @@ class Video(Base):
             'key': self.key,
             'kid': self.kid,
         }
-        # Return object data in easily serializeable format
 
 
 engine = create_engine('sqlite:///videos.db')
-
 Base.metadata.create_all(engine)
