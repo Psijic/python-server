@@ -9,3 +9,8 @@ If you want to stop it, press `Ctrl + C`
 You can upload a video file of `ALLOWED_EXTENSIONS` with `POST` request using external tools like _Postman_, _Fiddler_ etc.
 The simple way is to run next Bash command:
 `curl  -F 'file=@{yourfilename.mp4}' 0.0.0.0:5000/upload_input_content`
+
+### Tools
+It's possible to use any content encryption/decryption tools like:  
+https://www.ffmpeg.org  
+https://www.bento4.com
