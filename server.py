@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import os
+import secrets
 
 from flask import Flask, jsonify, redirect, render_template, request, send_file
 from sqlalchemy import create_engine
@@ -42,11 +43,23 @@ def add_file_to_db(name, path, key, kid):
     video = Video(name=name, path=path, key=key, kid=kid, )
     session.add(video)
     session.commit()
+    return video.id
 
 
 def add_file_to_library(filename):
     # encrypt_file(AES_KEY, UPLOAD_FOLDER + filename)
-    add_file_to_db(filename, UPLOAD_FOLDER, "key_" + filename, "kid_" + filename)
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    key = secrets.token_urlsafe(16)
+    kid = secrets.token_urlsafe(16)
+    encode_file(path, key, kid)
+    return add_file_to_db(filename, UPLOAD_FOLDER, key, kid)  # returns video.id
+
+
+def encode_file(path, key, kid):
+    print('Encoding file: {}'.format(path))
+    os.system(
+        'ffmpeg -y {path} {codecs} -encryption_scheme cenc-aes-ctr -encryption_key {key} -encryption_kid {kid} {path}'
+            .format(path=path, codecs='-vcodec copy -acodec copy', key=key, kid=kid))
 
 
 # def get_file_path(content_id):
@@ -85,7 +98,8 @@ def play_video(content_id):
 
 @app.route('/packaged_content', methods=['POST'])
 def packaged_content_post():
-    return jsonify({'input_content_id': 1, 'key': 'hyN9IKGfWKdAwFaE5pm0qg', 'kid': 'oW5AK5BW43HzbTSKpiu3SQ'})
+    return jsonify({'packaged_content_id': 1})
+    # return jsonify({'input_content_id': 1, 'key': 'hyN9IKGfWKdAwFaE5pm0qg', 'kid': 'oW5AK5BW43HzbTSKpiu3SQ'})
 
 
 # upload file
@@ -104,8 +118,8 @@ def upload_file():
             abort(400, 'Video with this name already exists')
 
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        add_file_to_library(filename)
-        return jsonify({'input_content_id': 1})
+        content_id = add_file_to_library(filename)
+        return jsonify({'input_content_id': content_id})
     abort(400, 'This video format is not supported ')
 
 

@@ -3,8 +3,7 @@
 <h1>Upload new video file</h1>
 <h3>You can upload {{fileTypes}} files up to {{fileSize}}MB</h3>
 <form method=post enctype=multipart/form-data>
-    <input type=file name=file>
+    <input type=file name=file accept="{{fileTypes}}">
     <input type=submit value=Upload>
 </form>
-<br>
-<a href="/all">All Videos</a>
+<p><a href="/all">All Videos</a></p>
