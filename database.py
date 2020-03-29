@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 
+# TODO: split database to encoded and decoded videos?
 class Video(Base):
     __tablename__ = 'mpg'
 

@@ -1,8 +1,8 @@
 #!/usr/bin/python3
-import os
-import secrets
-
 import logging
+import os
+import subprocess
+
 from flask import Flask, jsonify, redirect, render_template, request, send_file
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -12,7 +12,8 @@ from werkzeug.utils import secure_filename
 from database import Base, Video
 
 IS_DEBUG = True  # False for release!
-VIDEO_UPLOAD_DIR = 'videos/uploaded'  # Path()
+IS_AUTO_CLEAN = True
+VIDEO_UPLOAD_DIR = 'videos/uploaded/'  # Path()
 VIDEO_ENCODE_DIR = 'videos/encoded/'
 ALLOWED_EXTENSIONS = ['.mp4', '.mkv', '.jpg']
 MAX_FILE_SIZE_MB = 512
@@ -45,21 +46,31 @@ def add_file_to_library(name, path, key=None, kid=None):
     return video.id
 
 
+def delete_content(path_in, video):
+    os.remove(path_in)
+    session.delete(video)
+    session.commit()
+
+
 def encode_file(path_in, path_out, key, kid):
     logging.info('Encoding file: {}'.format(path_in))
-    if key is None:
-        key = secrets.token_urlsafe(16)
-    if kid is None:
-        kid = secrets.token_urlsafe(16)
+    return subprocess.call([
+        'ffmpeg', '-y',
+        '-i', path_in,
+        '-vcodec', 'copy',
+        '-acodec', 'copy',
+        '-encryption_scheme', 'cenc-aes-ctr',
+        '-encryption_key', key,
+        '-encryption_kid', kid,
+        path_out
+    ])
 
-    os.system(
-        'ffmpeg -y -i {path_in} {codecs} -encryption_scheme cenc-aes-ctr -encryption_key {key} -encryption_kid {kid} {path_out}'
-            .format(path_in=path_in, codecs='-vcodec copy -acodec copy', key=key, kid=kid, path_out=path_out))
 
-
-# def get_file_path(content_id):
-#     video = session.query(Video).filter_by(id=content_id).scalar()
-#     return os.path.abspath(video.path + video.name)
+def get_file_path(content_id):
+    video = session.query(Video).filter_by(id=content_id).scalar()
+    if video is None:
+        return None
+    return os.path.join(video.path, video.name)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -76,22 +87,24 @@ def packaged_content_get(content_id):
     video = session.query(Video).filter_by(id=content_id).scalar()
     if video is None:
         abort(418, 'File not exists')
-    url = os.path.abspath(video.path + video.name)
+    url = os.path.join(video.path, video.name)
+
+    # uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
+    # return send_from_directory(directory=uploads, filename=filename)
+
     return jsonify({'url': url, 'key': video.key, 'kid': video.kid})
 
 
 @app.route('/download/<int:content_id>', methods=['GET'])
 def download_file(content_id):
-    video = session.query(Video).filter_by(id=content_id).scalar()
-    url = os.path.abspath(video.path + video.name)
-    return send_file(url, as_attachment=True)
+    #TODO: content_id check
+    return send_file(get_file_path(content_id), as_attachment=True)
 
 
 @app.route('/play/<int:content_id>', methods=['GET'])
 def play_video(content_id):
-    video = session.query(Video).filter_by(id=content_id).scalar()
-    url = os.path.abspath(video.path + video.name)
-    return render_template('player.html', url=url)
+    # TODO: content_id check
+    return render_template('player.html', url=get_file_path(content_id))
 
 
 @app.route('/packaged_content', methods=['POST'])
@@ -103,16 +116,20 @@ def packaged_content_post():
         abort(400, 'Needed parameters {id, key, kid} are not in request data.')
 
     video = session.query(Video).filter_by(id=options['id']).scalar()
-    path_in = os.path.join(app.config['UPLOAD_DIR'], video.name)
+    if video is None:
+        abort(400, 'Content with this id is not existed')
+
+    path_in = os.path.join(video.path, video.name)
     path_out = os.path.join(VIDEO_ENCODE_DIR, video.name)
-    encode_file(path_in, path_out, options['key'], options['kid'])
+    encode_result = encode_file(path_in, path_out, options['key'], options['kid'])
 
-    # TODO: Should we clean original videos?
-    # os.remove(path_in)
-    # session.delete(video)
-    # session.commit()
+    if encode_result != 0:
+        abort(403, 'Error encoding video, code: {}'.format(encode_result))
 
-    # we don't wait for encoding result for now
+    # should we clean original videos?
+    if IS_AUTO_CLEAN:
+        delete_content(path_in, video)
+
     encoded_id = add_file_to_library(video.name, VIDEO_ENCODE_DIR, options['key'], options['kid'])
     return jsonify({'packaged_content_id': encoded_id})
 
@@ -133,7 +150,7 @@ def upload_file():
             abort(400, 'Video with this name already exists')
 
         try:
-            file.save(os.path.join(app.config['UPLOAD_DIR'], filename))
+            file.save(os.path.join(VIDEO_UPLOAD_DIR, filename))
             content_id = add_file_to_library(filename, VIDEO_UPLOAD_DIR)
             return jsonify({'input_content_id': content_id})
         except Exception as e:
