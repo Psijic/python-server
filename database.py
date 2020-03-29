@@ -12,8 +12,8 @@ class Video(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(256), nullable=False)
     path = Column(String(256), nullable=False)
-    key = Column(String(32), nullable=False)
-    kid = Column(String(32), nullable=False)
+    key = Column(String(32), nullable=True)
+    kid = Column(String(32), nullable=True)
 
     @property
     def serialize(self):

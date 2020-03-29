@@ -38,25 +38,32 @@ def file_exists(filename):
     return session.query(Video.id).filter_by(name=filename).scalar() is not None
 
 
-def add_file_to_db(name, path, key, kid):
-    # file path could be different for CDN purposes, different formats etc.
-    video = Video(name=name, path=path, key=key, kid=kid, )
+# def add_file_to_db(name, path, key, kid):
+#     # file path could be different for CDN purposes, different formats etc.
+#     video = Video(name=name, path=path, key=key, kid=kid)
+#     session.add(video)
+#     session.commit()
+#     return video.id
+
+
+def add_file_to_library(name, key=None, kid=None):
+    # encrypt_file(AES_KEY, UPLOAD_FOLDER + filename)
+    print('Adding file to library:', name)
+    # path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    video = Video(name=name, path=UPLOAD_FOLDER, key=key, kid=kid)
     session.add(video)
     session.commit()
     return video.id
 
-
-def add_file_to_library(filename):
-    # encrypt_file(AES_KEY, UPLOAD_FOLDER + filename)
-    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    key = secrets.token_urlsafe(16)
-    kid = secrets.token_urlsafe(16)
-    encode_file(path, key, kid)
-    return add_file_to_db(filename, UPLOAD_FOLDER, key, kid)  # returns video.id
+    # encode_file(path, key, kid)
+    # return add_file_to_db(filename, UPLOAD_FOLDER, key, kid)  # returns video.id
 
 
 def encode_file(path, key, kid):
     print('Encoding file: {}'.format(path))
+    key = secrets.token_urlsafe(16)
+    kid = secrets.token_urlsafe(16)
     os.system(
         'ffmpeg -y {path} {codecs} -encryption_scheme cenc-aes-ctr -encryption_key {key} -encryption_kid {kid} {path}'
             .format(path=path, codecs='-vcodec copy -acodec copy', key=key, kid=kid))
@@ -78,6 +85,8 @@ def upload_file_form():
 @app.route('/packaged_content/<int:content_id>', methods=['GET'])
 def packaged_content_get(content_id):
     video = session.query(Video).filter_by(id=content_id).scalar()
+    if video is None:
+        abort(418, 'File not exists')
     url = os.path.abspath(video.path + video.name)
     return jsonify({'url': url, 'key': video.key, 'kid': video.kid})
 
@@ -98,7 +107,16 @@ def play_video(content_id):
 
 @app.route('/packaged_content', methods=['POST'])
 def packaged_content_post():
-    return jsonify({'packaged_content_id': 1})
+    # need to send options in JSON format
+    options = request.get_json()
+    print('packaged_content', options)
+    if not all(k in options for k in ('id', 'key', 'kid')):
+        abort(400, 'Needed parameters {id, key, kid} are not in request data.')
+
+    video = session.query(Video).filter_by(id=options['id']).scalar()
+    path = os.path.join(app.config['UPLOAD_FOLDER'], video.name)
+    encode_file(path, options['key'], options['kid'])
+    return jsonify({'packaged_content_id': options['id']})
     # return jsonify({'input_content_id': 1, 'key': 'hyN9IKGfWKdAwFaE5pm0qg', 'kid': 'oW5AK5BW43HzbTSKpiu3SQ'})
 
 
@@ -114,8 +132,8 @@ def upload_file():
         return redirect(request.url)
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        if file_exists(filename):
-            abort(400, 'Video with this name already exists')
+        # if file_exists(filename):
+        #     abort(400, 'Video with this name already exists')
 
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         content_id = add_file_to_library(filename)
