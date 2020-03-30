@@ -9,17 +9,17 @@ from sqlalchemy.orm import sessionmaker
 from werkzeug.exceptions import abort
 from werkzeug.utils import secure_filename
 
-from database import Base, Video
+from database import Base, EncodedVideo, UploadedVideo
 
 IS_DEBUG = True  # False for release!
-IS_AUTO_CLEAN = True
+IS_AUTO_CLEAN = False
 VIDEO_UPLOAD_DIR = 'videos/uploaded/'  # Path()
 VIDEO_ENCODE_DIR = 'videos/encoded/'
 ALLOWED_EXTENSIONS = ['.mp4', '.mkv', '.jpg']
 MAX_FILE_SIZE_MB = 512
 
 app = Flask(__name__)
-app.config['UPLOAD_DIR'] = VIDEO_UPLOAD_DIR
+app.config['UPLOAD_FOLDER'] = VIDEO_UPLOAD_DIR
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE_MB * 1024 * 1024
 
 engine = create_engine('sqlite:///videos.db', connect_args={'check_same_thread': False})
@@ -35,12 +35,16 @@ def allowed_file(filename):
 
 # check if filename already exists. It's possible to check by file key.
 def file_exists(filename):
-    return session.query(Video.id).filter_by(name=filename).scalar() is not None
+    return session.query(UploadedVideo.id).filter_by(name=filename).scalar() is not None
 
 
+# add a file to DB. Could be split to uploaded/encoded methods.
 def add_file_to_library(name, path, key=None, kid=None):
     logging.info('Adding file to library:', name)
-    video = Video(name=name, path=path, key=key, kid=kid)
+    if key is None and kid is None:
+        video = UploadedVideo(name=name, path=path)
+    else:
+        video = EncodedVideo(name=name, path=path, key=key, kid=kid)
     session.add(video)
     session.commit()
     return video.id
@@ -79,24 +83,9 @@ def upload_file_form():
     return render_template('main.html', fileTypes=file_types, fileSize=MAX_FILE_SIZE_MB)
 
 
-@app.route('/content/<int:content_id>', methods=['GET'])
-@app.route('/packaged_content/<int:content_id>', methods=['GET'])
-def packaged_content_get(content_id):
-    # for encoded videos only we should split the Video table
-    video = session.query(Video).filter_by(id=content_id).scalar()
-    if video is None:
-        abort(418, 'File not exists')
-    url = os.path.join(video.path, video.name)
-
-    # uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
-    # return send_from_directory(directory=uploads, filename=filename)
-
-    return jsonify({'url': url, 'key': video.key, 'kid': video.kid})
-
-
 @app.route('/download/<int:content_id>', methods=['GET'])
 def download_file(content_id):
-    video = session.query(Video).filter_by(id=content_id).scalar()  # should be inlined
+    video = session.query(UploadedVideo).filter_by(id=content_id).scalar()  # should be inlined
     if video is None:
         abort(418, 'File not exists')
     return send_file(os.path.join(video.path, video.name), as_attachment=True)
@@ -104,10 +93,20 @@ def download_file(content_id):
 
 @app.route('/play/<int:content_id>', methods=['GET'])
 def play_video(content_id):
-    video = session.query(Video).filter_by(id=content_id).scalar()  # should be inlined
+    video = session.query(UploadedVideo).filter_by(id=content_id).scalar()  # should be inlined
     if video is None:
         abort(418, 'File not exists')
     return render_template('player.html', url=os.path.join(video.path, video.name))
+
+
+@app.route('/packaged_content/<int:content_id>', methods=['GET'])
+def packaged_content_get(content_id):
+    video = session.query(EncodedVideo).filter_by(id=content_id).scalar()
+    if video is None:
+        abort(418, 'File not exists')
+    url = os.path.join(video.path, video.name)
+
+    return jsonify({'url': url, 'key': video.key, 'kid': video.kid})
 
 
 @app.route('/packaged_content', methods=['POST'])
@@ -118,9 +117,9 @@ def packaged_content_post():
     if not all(k in options for k in ('id', 'key', 'kid')):
         abort(400, 'Needed parameters {id, key, kid} are not in request data.')
 
-    video = session.query(Video).filter_by(id=options['id']).scalar()
+    video = session.query(UploadedVideo).filter_by(id=options['id']).scalar()
     if video is None:
-        abort(400, 'Content with this id is not existed')
+        abort(400, 'Content with this id not exist')
 
     path_in = os.path.join(video.path, video.name)
     path_out = os.path.join(VIDEO_ENCODE_DIR, video.name)
@@ -129,7 +128,7 @@ def packaged_content_post():
     if encode_result != 0:
         abort(403, 'Error encoding video, code: {}'.format(encode_result))
 
-    # should we clean original videos?
+    # should we clean original video?
     if IS_AUTO_CLEAN:
         delete_content(path_in, video)
 
@@ -150,7 +149,7 @@ def upload_file():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         if file_exists(filename):
-            abort(400, 'Video with this name already exists')
+            abort(400, 'UploadedVideo with this name already exists')
 
         try:
             file.save(os.path.join(VIDEO_UPLOAD_DIR, filename))
@@ -163,11 +162,16 @@ def upload_file():
     abort(400, 'This video format is not supported ')
 
 
-@app.route('/all', methods=['GET'])
-def show_all_videos():
-    videos = session.query(Video).all()
-    return jsonify(videos=[video.serialize for video in videos])
-    # return render_template('player.html', videos=all_videos)
+@app.route('/allUploaded', methods=['GET'])
+def show_all_uploaded_videos():
+    videos = session.query(UploadedVideo).all()
+    return jsonify(uploaded_videos=[video.serialize for video in videos])
+
+
+@app.route('/allEncoded', methods=['GET'])
+def show_all_encoded_videos():
+    videos = session.query(EncodedVideo).all()
+    return jsonify(encoded_videos=[video.serialize for video in videos])
 
 
 if __name__ == '__main__':

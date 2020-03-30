@@ -6,15 +6,14 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 
-# TODO: split database to encoded and decoded videos?
-class Video(Base):
-    __tablename__ = 'mpg'
+class EncodedVideo(Base):
+    __tablename__ = 'encoded_video'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(256), nullable=False)
     path = Column(String(256), nullable=False)
-    key = Column(String(32), nullable=True)
-    kid = Column(String(32), nullable=True)
+    key = Column(String(32), nullable=False)
+    kid = Column(String(32), nullable=False)
 
     @property
     def serialize(self):
@@ -25,6 +24,23 @@ class Video(Base):
             'path': self.path,
             'key': self.key,
             'kid': self.kid,
+        }
+
+
+class UploadedVideo(Base):
+    __tablename__ = 'uploaded_video'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(256), nullable=False)
+    path = Column(String(256), nullable=False)
+
+    @property
+    def serialize(self):
+        # Return object data in serializeable format
+        return {
+            'id': self.id,
+            'name': self.name,
+            'path': self.path,
         }
 
 
