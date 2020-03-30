@@ -11,11 +11,11 @@ from werkzeug.utils import secure_filename
 
 from database import Base, EncodedVideo, UploadedVideo
 
-IS_DEBUG = True  # False for release!
+IS_DEBUG = False  # False for release!
 IS_AUTO_CLEAN = False
 VIDEO_UPLOAD_DIR = 'videos/uploaded/'  # Path()
 VIDEO_ENCODE_DIR = 'videos/encoded/'
-ALLOWED_EXTENSIONS = ['.mp4', '.mkv', '.jpg']
+ALLOWED_EXTENSIONS = ['.mp4', '.mkv']
 MAX_FILE_SIZE_MB = 512
 
 app = Flask(__name__)
