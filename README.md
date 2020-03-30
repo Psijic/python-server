@@ -3,7 +3,7 @@ Python simple video encoding server. Uses **Flask**, **SQLAlchemy**, **FFmpeg**.
 
 ### Setup
 You need to have [FFmpeg](https://www.ffmpeg.org) binary installed.
-Python script makes a video storage directory `$UPLOAD_FOLDER` if it doesn't exist.   
+Python script makes a video storage directories if they don't exist.   
 Also, the videos.db database will be generated. If there are problems with it, run database.py first.
 
 ### Running
