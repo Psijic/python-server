@@ -52,8 +52,12 @@ def delete_content(path_in, video):
     session.commit()
 
 
+# keys to success.
 def encode_file(path_in, path_out, key, kid):
     logging.info('Encoding file: {}'.format(path_in))
+    # This is simple encoding for better performance with test cases.
+    # For DASH you can add -dash 1 and other parameters.
+    # See https://developer.mozilla.org/en-US/docs/Web/HTML/DASH_Adaptive_Streaming_for_HTML_5_Video
     return subprocess.call([
         'ffmpeg', '-y',
         '-i', path_in,
@@ -66,24 +70,19 @@ def encode_file(path_in, path_out, key, kid):
     ])
 
 
-def get_file_path(content_id):
-    video = session.query(Video).filter_by(id=content_id).scalar()
-    if video is None:
-        return None
-    return os.path.join(video.path, video.name)
-
-
+# upload file main form
 @app.route('/', methods=['GET', 'POST'])
 def upload_file_form():
-    # upload file main form
     if request.method == 'POST':
         return upload_file()
     file_types = ', '.join(ALLOWED_EXTENSIONS)
     return render_template('main.html', fileTypes=file_types, fileSize=MAX_FILE_SIZE_MB)
 
 
+@app.route('/content/<int:content_id>', methods=['GET'])
 @app.route('/packaged_content/<int:content_id>', methods=['GET'])
 def packaged_content_get(content_id):
+    # for encoded videos only we should split the Video table
     video = session.query(Video).filter_by(id=content_id).scalar()
     if video is None:
         abort(418, 'File not exists')
@@ -97,14 +96,18 @@ def packaged_content_get(content_id):
 
 @app.route('/download/<int:content_id>', methods=['GET'])
 def download_file(content_id):
-    #TODO: content_id check
-    return send_file(get_file_path(content_id), as_attachment=True)
+    video = session.query(Video).filter_by(id=content_id).scalar()  # should be inlined
+    if video is None:
+        abort(418, 'File not exists')
+    return send_file(os.path.join(video.path, video.name), as_attachment=True)
 
 
 @app.route('/play/<int:content_id>', methods=['GET'])
 def play_video(content_id):
-    # TODO: content_id check
-    return render_template('player.html', url=get_file_path(content_id))
+    video = session.query(Video).filter_by(id=content_id).scalar()  # should be inlined
+    if video is None:
+        abort(418, 'File not exists')
+    return render_template('player.html', url=os.path.join(video.path, video.name))
 
 
 @app.route('/packaged_content', methods=['POST'])

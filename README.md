@@ -39,8 +39,6 @@ For playing encoded video it's possible to implement advanced video player like 
 For DASH encoding we need to split the video on chunks and generate a manifest file. 
 And for different resolution support, we need to encode the uploaded file with lesser resolutions. 
 It's possible to separate video and audio tracks and use only one audio track. 
-It's also can be done to support different language tracks.
-
-**Useful links**: 
+It's also can be done to support different language tracks.  
 [DASH Adaptive Streaming for HTML 5 Video](https://developer.mozilla.org/en-US/docs/Web/HTML/DASH_Adaptive_Streaming_for_HTML_5_Video)
 
