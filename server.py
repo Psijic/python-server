@@ -33,7 +33,7 @@ def allowed_file(filename):
     return os.path.splitext(filename)[1] in ALLOWED_EXTENSIONS
 
 
-# check if filename already exists. It's possible to check by file key.
+# check if filename already exists. It's possible to check by file hash.
 def file_exists(filename):
     return session.query(UploadedVideo.id).filter_by(name=filename).scalar() is not None
 
