@@ -22,6 +22,7 @@ You can play encrypted video with `ffplay` command like
 Future plans: add web player directly in a browser (`/templates/player.html` file)
 
 ### Endpoints
+  * GET, POST `/` - main web form. Visit `http://0.0.0.0:5000/` address in browser.
   * POST `/upload`, `/upload_input_content` - upload a video file with extension of `$ALLOWED_EXTENSIONS`.  
 You can also do it via web form.
 Sample Bash command (or you can use tools like _Postman_, _Fiddler_ etc.):  
