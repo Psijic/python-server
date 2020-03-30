@@ -17,7 +17,7 @@ The other way is to run next Bash command (you should use same syntax):
 `curl  -F 'file=@{yourfilename.mp4}' 0.0.0.0:5000/upload_input_content`.
 
 ### Playing encoded file
-You can play encrypted video with ffplay command like  
+You can play encrypted video with `ffplay` command like  
 `ffplay SampleVideo_encrypted.mp4 -decryption_key 76a6c65c5ea762046bd749a2e632ccbb`.  
 Future plans: add web player directly in a browser (`/templates/player.html` file)
 
