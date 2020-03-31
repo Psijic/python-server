@@ -28,11 +28,13 @@ You can also do it via web form.
 Sample Bash command (or you can use tools like _Postman_, _Fiddler_ etc.):  
 `curl  -F 'file=@{yourfilename.mp4}' 0.0.0.0:5000/upload_input_content`.  
 
-  * GET `/download/<int:content_id>` - download encoded file
-  * GET `/play/<int:content_id>` - play encoded video in a browser player (TBD with [Shaka Player](https://github.com/google/shaka-packager ))
+  * GET `/download/<int:content_id>` - download encoded file.
+  * GET `/play/<int:content_id>` - play encoded video in a browser player (TBD with [Shaka Player](https://github.com/google/shaka-packager )).
   * POST `/packaged_content` - encode previously uploaded video. Need to send JSON data with {id, key, kid} in request. Sample:  
 `curl -X POST -H "Content-Type: application/json" -d '{"id":1, "key":"76a6c65c5ea762046bd749a2e632ccbb", 
-"kid":"a7e61c373e219033c21091fa607bf3b8"}' 0.0.0.0:5000/packaged_content` 
+"kid":"a7e61c373e219033c21091fa607bf3b8"}' 0.0.0.0:5000/packaged_content` .
+  * GET `/allUploaded` - list of all uploaded videos.
+  * GET `/allEncoded` - list of all encoded videos.
 
 ### Next
 FFmpeg encryption uses only cenc-aes-ctr scheme, so, for CBCs it's possible to use another tools like [Bento4](https://www.bento4.com ) or [Shaka Packager](https://github.com/google/shaka-packager).
