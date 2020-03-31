@@ -15,7 +15,7 @@ pip3 install flask
 pip3 install sqlalchemy
 ```
 
-Also **Docker** container included. Run:
+Also **Docker** container included. Sample commands to use it:
 ```shell script
 docker build -t video-server .
 docker run -it -d -p 5000:5000 video-server
