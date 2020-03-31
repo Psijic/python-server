@@ -85,7 +85,7 @@ def upload_file_form():
 
 @app.route('/download/<int:content_id>', methods=['GET'])
 def download_file(content_id):
-    video = session.query(UploadedVideo).filter_by(id=content_id).scalar()  # should be inlined
+    video = session.query(EncodedVideo).filter_by(id=content_id).scalar()  # should be inlined
     if video is None:
         abort(418, 'File not exists')
     return send_file(os.path.join(video.path, video.name), as_attachment=True)
@@ -93,7 +93,7 @@ def download_file(content_id):
 
 @app.route('/play/<int:content_id>', methods=['GET'])
 def play_video(content_id):
-    video = session.query(UploadedVideo).filter_by(id=content_id).scalar()  # should be inlined
+    video = session.query(EncodedVideo).filter_by(id=content_id).scalar()  # should be inlined
     if video is None:
         abort(418, 'File not exists')
     return render_template('player.html', url=os.path.join(video.path, video.name))
