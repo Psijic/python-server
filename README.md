@@ -6,6 +6,21 @@ You need to have [FFmpeg](https://www.ffmpeg.org) binary installed.
 Python script makes a video storage directories if they don't exist.   
 Also, the videos.db database will be generated. If there are problems with it, run database.py first.
 
+For **Debian**-based derivatives you can run these commands:
+```shell script
+sudo apt-get -y install ffmpeg
+
+pip3 install --upgrade pip
+pip3 install flask
+pip3 install sqlalchemy
+```
+
+Also **Docker** container included. Run:
+```shell script
+docker build -t video-server .
+docker run -it -d -p 5000:5000 video-server
+```
+
 ### Running
 Just run `./server.py` in Unix terminal. Or execute `python3 server.py` command.  
 The server runs on `http://0.0.0.0:5000/` address. If you want to stop it, press `Ctrl + C`.
